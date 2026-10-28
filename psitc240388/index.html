@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Browser History Management System</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Poppins:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- FontAwesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      
+      <!-- App Header -->
+      <header class="app-header">
+        <div class="header-title">
+          <i class="fa-solid fa-compass logo-icon"></i>
+          <div>
+            <h1>Browser History Manager</h1>
+            <p>Interactive LIFO Stack Data Structure Simulation</p>
+          </div>
+        </div>
+        <div class="lifo-badge">
+          <span class="pulse-dot"></span>
+          <span>LIFO Architecture Active</span>
+        </div>
+      </header>
+
+      <!-- Main Layout Grid -->
+      <main class="grid-layout">
+        
+        <!-- Controls Column -->
+        <div class="column">
+          
+          <!-- Input Card -->
+          <section class="card">
+            <h2>
+              <i class="fa-solid fa-globe icon-primary"></i> Visit Website
+            </h2>
+            <div class="input-group">
+              <input
+                type="text"
+                id="websiteInput"
+                placeholder="e.g. github.com"
+                autocomplete="off"
+              />
+              <button id="visitBtn" class="btn btn-primary">
+                <span>Visit</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </section>
+
+          <!-- Active Page Card -->
+          <section class="card">
+            <span class="card-label">CURRENT ACTIVE PAGE (PEEK)</span>
+            <div id="currentPage" class="current-page-box">
+              No page visited yet
+            </div>
+          </section>
+
+          <!-- Navigation Controls Card -->
+          <section class="card">
+            <span class="card-label">STACK OPERATIONS</span>
+            <div class="controls-grid">
+              <button id="backBtn" class="btn btn-blue" disabled>
+                <i class="fa-solid fa-arrow-left"></i> Back
+              </button>
+              <button id="forwardBtn" class="btn btn-purple" disabled>
+                Forward <i class="fa-solid fa-arrow-right"></i>
+              </button>
+              <button id="clearBtn" class="btn btn-danger">
+                <i class="fa-solid fa-trash-can"></i> Clear
+              </button>
+              <button id="resetBtn" class="btn btn-neutral">
+                <i class="fa-solid fa-rotate"></i> Reset
+              </button>
+            </div>
+          </section>
+
+          <!-- System Log Card -->
+          <section class="card">
+            <span class="card-label">SYSTEM LOG</span>
+            <div id="message" class="status-box">
+              System ready. Visit a website to start browsing.
+            </div>
+          </section>
+
+        </div>
+
+        <!-- Stack Displays Column -->
+        <div class="column">
+          
+          <!-- History / Back Stack -->
+          <section class="card stack-card history-card">
+            <h2>
+              <i class="fa-solid fa-layer-group icon-primary"></i> History Stack (Back Stack)
+            </h2>
+            <p class="stack-subtitle">Pushed on visit • Popped on Back</p>
+            <div id="historyStack" class="stack-container">
+              <!-- Populated dynamically by script.js -->
+            </div>
+          </section>
+
+          <!-- Forward Stack -->
+          <section class="card stack-card forward-card">
+            <h2>
+              <i class="fa-solid fa-arrow-right-arrow-left icon-purple"></i> Forward Stack
+            </h2>
+            <p class="stack-subtitle">Pushed on Back • Popped on Forward</p>
+            <div id="forwardStack" class="stack-container">
+              <!-- Populated dynamically by script.js -->
+            </div>
+          </section>
+
+        </div>
+
+      </main>
+    </div>
+
+    <!-- External Script -->
+    <script src="script.js"></script>
+  </body>
+</html>
