@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser History Dual-Stack Simulator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary-accent: #22c55e;
+        }
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .stack-item {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stack-item:hover {
+            transform: translateX(4px);
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(34, 197, 94, 0.6);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col">
+    <header class="max-w-7xl w-full mx-auto mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3 text-emerald-400">
+                <i data-lucide="layers"></i> Dual-Stack Browser Navigation Engine
+            </h1>
+            <p class="text-gray-400 text-sm mt-1">
+                Visualizing LIFO (Last-In, First-Out) stack operations for browser back/forward navigation.
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="resetToDefaults()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700 transition flex items-center gap-2">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset 20 Default Sites
+            </button>
+            <button onclick="clearAllStacks()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-red-950/60 hover:bg-red-900/60 text-red-300 border border-red-800/50 transition flex items-center gap-2">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Clear All Stacks
+            </button>
+        </div>
+    </header>
+
+    <!-- Simulated Browser Chrome -->
+    <div class="max-w-7xl w-full mx-auto mb-8 glass-panel rounded-xl overflow-hidden shadow-2xl border border-slate-800">
+        <!-- Browser Toolbar -->
+        <div class="bg-slate-900/90 px-4 py-3 border-b border-slate-800 flex items-center gap-3">
+            <div class="flex items-center gap-1.5 mr-2">
+                <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-green-500/80 inline-block"></span>
+            </div>
+
+            <!-- Nav Controls -->
+            <button id="btnBack" onclick="navigateBack()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-gray-200 transition" title="Go Back (Pop Back Stack, Push Current to Forward)">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </button>
+            <button id="btnForward" onclick="navigateForward()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-gray-200 transition" title="Go Forward (Pop Forward Stack, Push Current to Back)">
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+            <button onclick="refreshPage()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-200 transition" title="Reload Page">
+                <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+            </button>
+
+            <!-- URL Input Form -->
+            <form onsubmit="handleUrlSubmit(event)" class="flex-1 flex gap-2">
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                        <i data-lucide="globe" class="w-4 h-4"></i>
+                    </span>
+                    <input type="url" id="urlInput" required placeholder="https://example.com" class="w-full pl-9 pr-4 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-emerald-300 focus:outline-none focus:border-emerald-500/80 transition">
+                </div>
+                <button type="submit" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm rounded-lg transition flex items-center gap-1.5">
+                    <i data-lucide="corner-down-left" class="w-4 h-4"></i> Visit
+                </button>
+            </form>
+        </div>
+
+        <!-- Simulated Web View Content -->
+        <div class="p-6 bg-slate-950/40 min-h-[160px] flex flex-col justify-center items-center text-center">
+            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-500 mb-1">Active Viewport</span>
+            <h2 id="currentSiteTitle" class="text-xl md:text-2xl font-bold text-gray-100 mb-1">Wikipedia: Computer Science</h2>
+            <p id="currentSiteUrl" class="text-xs text-gray-400 font-mono mb-4">https://wikipedia.org/wiki/Computer_science</p>
+            
+            <div class="flex flex-wrap justify-center gap-2 max-w-2xl">
+                <span class="text-xs text-gray-500 py-1">Quick Visit:</span>
+                <button onclick="visitSite('https://github.com/trending', 'GitHub Trending')" class="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-gray-300 px-2.5 py-1 rounded-md transition">GitHub Trending</button>
+                <button onclick="visitSite('https://news.ycombinator.com', 'Hacker News')" class="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-gray-300 px-2.5 py-1 rounded-md transition">Hacker News</button>
+                <button onclick="visitSite('https://developer.mozilla.org', 'MDN Web Docs')" class="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-gray-300 px-2.5 py-1 rounded-md transition">MDN Docs</button>
+                <button onclick="visitSite('https://codepen.io', 'CodePen Showcase')" class="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-gray-300 px-2.5 py-1 rounded-md transition">CodePen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dual-Stack Visualization Grid -->
+    <div class="max-w-7xl w-full mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1">
+        
+        <!-- BACK STACK PANEL -->
+        <div class="glass-panel rounded-xl p-5 flex flex-col h-[520px]">
+            <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="arrow-down-left" class="w-5 h-5 text-emerald-400"></i>
+                    <h3 class="font-bold text-gray-200">Back Stack (LIFO)</h3>
+                </div>
+                <span id="backCount" class="text-xs font-mono bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">0 items</span>
+            </div>
+            <p class="text-xs text-gray-400 mb-3">Top element is popped when you click <strong>Back</strong>.</p>
+
+            <div id="backStackContainer" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                <!-- Stack items injected here -->
+            </div>
+        </div>
+
+        <!-- FORWARD STACK PANEL -->
+        <div class="glass-panel rounded-xl p-5 flex flex-col h-[520px]">
+            <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="arrow-up-right" class="w-5 h-5 text-blue-400"></i>
+                    <h3 class="font-bold text-gray-200">Forward Stack (LIFO)</h3>
+                </div>
+                <span id="forwardCount" class="text-xs font-mono bg-blue-950 text-blue-400 border border-blue-800 px-2 py-0.5 rounded-full">0 items</span>
+            </div>
+            <p class="text-xs text-gray-400 mb-3">Top element is popped when you click <strong>Forward</strong>. Cleared upon new visit.</p>
+
+            <div id="forwardStackContainer" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                <!-- Stack items injected here -->
+            </div>
+        </div>
+
+        <!-- EXECUTION TRACE & METRICS LOG -->
+        <div class="glass-panel rounded-xl p-5 flex flex-col h-[520px] lg:col-span-1 md:col-span-2">
+            <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="terminal" class="w-5 h-5 text-yellow-400"></i>
+                    <h3 class="font-bold text-gray-200">LIFO Execution Log</h3>
+                </div>
+                <button onclick="clearTraceLog()" class="text-xs text-gray-400 hover:text-gray-200 transition">Clear Log</button>
+            </div>
+
+            <!-- Operations Console -->
+            <div id="logConsole" class="flex-1 overflow-y-auto bg-slate-950 rounded-lg p-3 font-mono text-xs space-y-2 border border-slate-900">
+                <!-- Log entries injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Dual-Stack Implementation -->
+    <script>
+        // Data Structure: Generic Stack
+        class Stack {
+            constructor() {
+                this.items = [];
+            }
+
+            push(element) {
+                this.items.push(element);
+            }
+
+            pop() {
+                if (this.isEmpty()) return null;
+                return this.items.pop();
+            }
+
+            peek() {
+                if (this.isEmpty()) return null;
+                return this.items[this.items.length - 1];
+            }
+
+            isEmpty() {
+                return this.items.length === 0;
+            }
+
+            size() {
+                return this.items.length;
+            }
+
+            clear() {
+                this.items = [];
+            }
+
+            toArray() {
+                return [...this.items];
+            }
+        }
+
+        // Default 20 Sites Sequence (Ordered chronologically from index 0 to index 19)
+        const DEFAULT_VISITED_SITES = [
+            { url: "https://google.com", title: "Google Search" },
+            { url: "https://github.com", title: "GitHub: Where the world builds software" },
+            { url: "https://stackoverflow.com", title: "Stack Overflow - Developer Community" },
+            { url: "https://developer.mozilla.org", title: "MDN Web Docs" },
+            { url: "https://reddit.com/r/programming", title: "Reddit - r/programming" },
+            { url: "https://news.ycombinator.com", title: "Hacker News" },
+            { url: "https://dev.to", title: "DEV Community" },
+            { url: "https://css-tricks.com", title: "CSS-Tricks" },
+            { url: "https://youtube.com", title: "YouTube" },
+            { url: "https://figma.com", title: "Figma: Collaborative Interface Design" },
+            { url: "https://openai.com", title: "OpenAI Research" },
+            { url: "https://w3schools.com", title: "W3Schools Online Web Tutorials" },
+            { url: "https://freecodecamp.org", title: "freeCodeCamp.org" },
+            { url: "https://codepen.io", title: "CodePen: Online Code Editor" },
+            { url: "https://geeksforgeeks.org", title: "GeeksforGeeks | Computer Science Portal" },
+            { url: "https://coursera.org", title: "Coursera | Build Skills with Online Courses" },
+            { url: "https://edx.org", title: "edX | Free Online Courses" },
+            { url: "https://leetcode.com", title: "LeetCode - Technical Coding Practice" },
+            { url: "https://hashnode.com", title: "Hashnode: Blogging Community for Developers" },
+            { url: "https://medium.com", title: "Medium – Where good ideas find you" }
+        ];
+
+        const CURRENT_DEFAULT_SITE = { 
+            url: "https://wikipedia.org/wiki/Computer_science", 
+            title: "Wikipedia: Computer Science" 
+        };
+
+        // Instantiating Back and Forward Stacks
+        const backStack = new Stack();
+        const forwardStack = new Stack();
+        let currentPage = { ...CURRENT_DEFAULT_SITE };
+
+        // Initialize App State with 20 Defaults
+        function resetToDefaults() {
+            backStack.clear();
+            forwardStack.clear();
+
+            // Push the 20 sites onto the back stack
+            DEFAULT_VISITED_SITES.forEach(site => {
+                backStack.push({
+                    ...site,
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                });
+            });
+
+            currentPage = { ...CURRENT_DEFAULT_SITE };
+            
+            logOperation("SYSTEM_RESET", "Initialized Back Stack with 20 default visited websites.", "emerald");
+            renderUI();
+        }
+
+        function visitSite(url, title = null) {
+            if (!url) return;
+            
+            // Extract display title if not provided
+            if (!title) {
+                try {
+                    const parsedUrl = new URL(url);
+                    title = parsedUrl.hostname + (parsedUrl.pathname !== '/' ? parsedUrl.pathname : '');
+                } catch (e) {
+                    title = url;
+                }
+            }
+
+            // Push current page onto Back Stack
+            backStack.push({
+                ...currentPage,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            });
+
+            // Set new active page
+            currentPage = { url, title };
+
+            // Explicitly clear Forward Stack on new navigate action
+            const clearedCount = forwardStack.size();
+            forwardStack.clear();
+
+            logOperation("VISIT", `Pushed "${currentPage.title}" onto Back Stack. ${clearedCount > 0 ? 'Forward stack cleared (' + clearedCount + ' items).' : ''}`, "emerald");
+            renderUI();
+        }
+
+        function handleUrlSubmit(event) {
+            event.preventDefault();
+            const input = document.getElementById('urlInput');
+            let url = input.value.trim();
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            visitSite(url);
+            input.value = '';
+        }
+
+        function navigateBack() {
+            if (backStack.isEmpty()) return;
+
+            // Push current page onto Forward Stack
+            forwardStack.push({
+                ...currentPage,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            });
+
+            // Pop top from Back Stack and assign to Current Page
+            currentPage = backStack.pop();
+
+            logOperation("BACK", `Popped top from Back Stack -> Set as current page. Pushed previous page to Forward Stack.`, "blue");
+            renderUI();
+        }
+
+        function navigateForward() {
+            if (forwardStack.isEmpty()) return;
+
+            // Push current page onto Back Stack
+            backStack.push({
+                ...currentPage,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            });
+
+            // Pop top from Forward Stack and assign to Current Page
+            currentPage = forwardStack.pop();
+
+            logOperation("FORWARD", `Popped top from Forward Stack -> Set as current page. Pushed previous page to Back Stack.`, "purple");
+            renderUI();
+        }
+
+        function refreshPage() {
+            logOperation("REFRESH", `Reloaded current view: "${currentPage.title}"`, "yellow");
+        }
+
+        function clearAllStacks() {
+            backStack.clear();
+            forwardStack.clear();
+            logOperation("CLEAR_ALL", "Purged all entries from both Back and Forward stacks.", "red");
+            renderUI();
+        }
+
+        function logOperation(action, message, color = "gray") {
+            const consoleEl = document.getElementById('logConsole');
+            const colorClasses = {
+                emerald: "text-emerald-400 border-emerald-900/40 bg-emerald-950/20",
+                blue: "text-blue-400 border-blue-900/40 bg-blue-950/20",
+                purple: "text-purple-400 border-purple-900/40 bg-purple-950/20",
+                yellow: "text-yellow-400 border-yellow-900/40 bg-yellow-950/20",
+                red: "text-red-400 border-red-900/40 bg-red-950/20"
+            };
+
+            const time = new Date().toLocaleTimeString();
+            const logItem = document.createElement('div');
+            logItem.className = `p-2 rounded border font-mono text-[11px] leading-relaxed ${colorClasses[color] || 'text-gray-300'}`;
+            logItem.innerHTML = `<span class="opacity-50">[${time}]</span> <strong class="uppercase">[${action}]</strong>: ${message}`;
+
+            consoleEl.prepend(logItem);
+        }
+
+        function clearTraceLog() {
+            document.getElementById('logConsole').innerHTML = '';
+        }
+
+        function renderUI() {
+            // Update active viewport display
+            document.getElementById('currentSiteTitle').textContent = currentPage.title;
+            document.getElementById('currentSiteUrl').textContent = currentPage.url;
+            document.getElementById('urlInput').placeholder = currentPage.url;
+
+            // Navigation button states
+            document.getElementById('btnBack').disabled = backStack.isEmpty();
+            document.getElementById('btnForward').disabled = forwardStack.isEmpty();
+
+            // Render Back Stack (Display top of stack at the top of list)
+            const backContainer = document.getElementById('backStackContainer');
+            document.getElementById('backCount').textContent = `${backStack.size()} items`;
+            backContainer.innerHTML = '';
+
+            const backItems = backStack.toArray(); // Array index 0 is bottom, length-1 is top
+            if (backItems.length === 0) {
+                backContainer.innerHTML = `<div class="text-center py-12 text-gray-600 text-xs italic">Back Stack is empty</div>`;
+            } else {
+                // Loop backwards so Top of Stack renders first
+                for (let i = backItems.length - 1; i >= 0; i--) {
+                    const item = backItems[i];
+                    const isTop = i === backItems.length - 1;
+                    const itemEl = document.createElement('div');
+                    itemEl.className = `stack-item p-3 rounded-lg border text-xs flex justify-between items-center ${
+                        isTop ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-200 font-medium' : 'bg-slate-900/70 border-slate-800 text-gray-300'
+                    }`;
+                    itemEl.innerHTML = `
+                        <div class="truncate mr-2">
+                            <div class="truncate font-semibold">${item.title}</div>
+                            <div class="text-[10px] text-gray-500 font-mono truncate">${item.url}</div>
+                        </div>
+                        <div class="flex flex-col items-end flex-shrink-0">
+                            ${isTop ? '<span class="text-[9px] bg-emerald-500 text-slate-950 font-bold px-1.5 py-0.5 rounded uppercase mb-1">TOP</span>' : `<span class="text-[9px] text-slate-500 font-mono mb-1">IDX ${i}</span>`}
+                            <span class="text-[9px] text-gray-500">${item.timestamp || ''}</span>
+                        </div>
+                    `;
+                    backContainer.appendChild(itemEl);
+                }
+            }
+
+            // Render Forward Stack
+            const forwardContainer = document.getElementById('forwardStackContainer');
+            document.getElementById('forwardCount').textContent = `${forwardStack.size()} items`;
+            forwardContainer.innerHTML = '';
+
+            const forwardItems = forwardStack.toArray();
+            if (forwardItems.length === 0) {
+                forwardContainer.innerHTML = `<div class="text-center py-12 text-gray-600 text-xs italic">Forward Stack is empty</div>`;
+            } else {
+                for (let i = forwardItems.length - 1; i >= 0; i--) {
+                    const item = forwardItems[i];
+                    const isTop = i === forwardItems.length - 1;
+                    const itemEl = document.createElement('div');
+                    itemEl.className = `stack-item p-3 rounded-lg border text-xs flex justify-between items-center ${
+                        isTop ? 'bg-blue-950/50 border-blue-500/50 text-blue-200 font-medium' : 'bg-slate-900/70 border-slate-800 text-gray-300'
+                    }`;
+                    itemEl.innerHTML = `
+                        <div class="truncate mr-2">
+                            <div class="truncate font-semibold">${item.title}</div>
+                            <div class="text-[10px] text-gray-500 font-mono truncate">${item.url}</div>
+                        </div>
+                        <div class="flex flex-col items-end flex-shrink-0">
+                            ${isTop ? '<span class="text-[9px] bg-blue-500 text-slate-950 font-bold px-1.5 py-0.5 rounded uppercase mb-1">TOP</span>' : `<span class="text-[9px] text-slate-500 font-mono mb-1">IDX ${i}</span>`}
+                            <span class="text-[9px] text-gray-500">${item.timestamp || ''}</span>
+                        </div>
+                    `;
+                    forwardContainer.appendChild(itemEl);
+                }
+            }
+
+            // Re-initialize Lucide Icons
+            lucide.createIcons();
+        }
+
+        // Initialize on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            resetToDefaults();
+        });
+    </script>
+</body>
+</html>
